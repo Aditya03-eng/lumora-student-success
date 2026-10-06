@@ -1,0 +1,11 @@
+mentor_id,mentor_name,department,expertise,max_students,current_students,available_slots
+M001,Rahul Sharma,CSE,Coding|Technical Skills,10,10,7
+M002,Priya Mehta,CSE,Communication|Career,10,10,5
+M003,Amit Kumar,ECE,Academic|Attendance,10,10,6
+M004,Neha Gupta,BBA,Career|Communication,10,10,4
+M005,Vikram Singh,Mechanical,Academic|Technical Skills,10,10,8
+M006,Anjali Verma,AI & DS,AI|Coding|Technical Skills,10,10,6
+M007,Rohit Kapoor,CSE,Coding|Placement,10,10,7
+M008,Sneha Sharma,ECE,Communication|Academic,10,10,5
+M009,Arjun Malhotra,AI & DS,AI|Data Science|Career,10,10,8
+M010,Pooja Thakur,BBA,Career|Communication,10,10,6

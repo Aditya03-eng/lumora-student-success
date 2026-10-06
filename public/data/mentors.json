@@ -1,0 +1,144 @@
+[
+  {
+    "mentor_id": "M001",
+    "mentor_name": "Rahul Sharma",
+    "department": "CSE",
+    "expertise": [
+      "Coding",
+      "Technical Skills"
+    ],
+    "expertise_raw": "Coding|Technical Skills",
+    "max_students": 10,
+    "current_students": 7,
+    "available_slots": 3,
+    "utilization_percent": 70.0
+  },
+  {
+    "mentor_id": "M002",
+    "mentor_name": "Priya Mehta",
+    "department": "CSE",
+    "expertise": [
+      "Communication",
+      "Career"
+    ],
+    "expertise_raw": "Communication|Career",
+    "max_students": 10,
+    "current_students": 5,
+    "available_slots": 5,
+    "utilization_percent": 50.0
+  },
+  {
+    "mentor_id": "M003",
+    "mentor_name": "Amit Kumar",
+    "department": "ECE",
+    "expertise": [
+      "Academic",
+      "Attendance"
+    ],
+    "expertise_raw": "Academic|Attendance",
+    "max_students": 10,
+    "current_students": 6,
+    "available_slots": 4,
+    "utilization_percent": 60.0
+  },
+  {
+    "mentor_id": "M004",
+    "mentor_name": "Neha Gupta",
+    "department": "BBA",
+    "expertise": [
+      "Career",
+      "Communication"
+    ],
+    "expertise_raw": "Career|Communication",
+    "max_students": 10,
+    "current_students": 4,
+    "available_slots": 6,
+    "utilization_percent": 40.0
+  },
+  {
+    "mentor_id": "M005",
+    "mentor_name": "Vikram Singh",
+    "department": "Mechanical",
+    "expertise": [
+      "Academic",
+      "Technical Skills"
+    ],
+    "expertise_raw": "Academic|Technical Skills",
+    "max_students": 10,
+    "current_students": 8,
+    "available_slots": 2,
+    "utilization_percent": 80.0
+  },
+  {
+    "mentor_id": "M006",
+    "mentor_name": "Anjali Verma",
+    "department": "AI & DS",
+    "expertise": [
+      "AI",
+      "Coding",
+      "Technical Skills"
+    ],
+    "expertise_raw": "AI|Coding|Technical Skills",
+    "max_students": 10,
+    "current_students": 6,
+    "available_slots": 4,
+    "utilization_percent": 60.0
+  },
+  {
+    "mentor_id": "M007",
+    "mentor_name": "Rohit Kapoor",
+    "department": "CSE",
+    "expertise": [
+      "Coding",
+      "Placement"
+    ],
+    "expertise_raw": "Coding|Placement",
+    "max_students": 10,
+    "current_students": 7,
+    "available_slots": 3,
+    "utilization_percent": 70.0
+  },
+  {
+    "mentor_id": "M008",
+    "mentor_name": "Sneha Sharma",
+    "department": "ECE",
+    "expertise": [
+      "Communication",
+      "Academic"
+    ],
+    "expertise_raw": "Communication|Academic",
+    "max_students": 10,
+    "current_students": 5,
+    "available_slots": 5,
+    "utilization_percent": 50.0
+  },
+  {
+    "mentor_id": "M009",
+    "mentor_name": "Arjun Malhotra",
+    "department": "AI & DS",
+    "expertise": [
+      "AI",
+      "Data Science",
+      "Career"
+    ],
+    "expertise_raw": "AI|Data Science|Career",
+    "max_students": 10,
+    "current_students": 8,
+    "available_slots": 2,
+    "utilization_percent": 80.0
+  },
+  {
+    "mentor_id": "M010",
+    "mentor_name": "Pooja Thakur",
+    "department": "BBA",
+    "expertise": [
+      "Career",
+      "Communication"
+    ],
+    "expertise_raw": "Career|Communication",
+    "max_students": 10,
+    "current_students": 6,
+    "available_slots": 4,
+    "utilization_percent": 60.0
+  }
+]
