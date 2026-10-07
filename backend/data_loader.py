@@ -92,6 +92,60 @@ class DataLoader:
         self.students_df = pd.read_csv(student_csv)
         self.mentors_df = pd.read_csv(mentor_csv)
 
+        # 1B. Load students imported through SQLite
+        conn = get_connection()
+
+        try:
+            imported_rows = conn.execute(
+                "SELECT student_id, student_data FROM students"
+            ).fetchall()
+        finally:
+            conn.close()
+
+        if imported_rows:
+            sqlite_students = []
+
+            for row in imported_rows:
+                try:
+                    student_data = json.loads(row["student_data"])
+                    sqlite_students.append(student_data)
+                except Exception as e:
+                    print(
+                        f"    Warning: Could not load SQLite student "
+                        f"{row['student_id']}: {e}"
+                    )
+
+            if sqlite_students:
+                sqlite_df = pd.DataFrame(sqlite_students)
+
+                # Avoid duplicate IDs if a student already exists in CSV
+                existing_ids = set(
+                    self.students_df["student_id"]
+                    .astype(str)
+                    .str.strip()
+                )
+
+                sqlite_df["student_id"] = (
+                    sqlite_df["student_id"]
+                    .astype(str)
+                    .str.strip()
+                )
+
+                sqlite_df = sqlite_df[
+                    ~sqlite_df["student_id"].isin(existing_ids)
+                ]
+
+                if not sqlite_df.empty:
+                    self.students_df = pd.concat(
+                        [self.students_df, sqlite_df],
+                        ignore_index=True,
+                        sort=False
+                    )
+
+                    print(
+                        f"    Added {len(sqlite_df)} students from SQLite."
+                    )
+
         # 2. Locate and load ML models
         model_search_dirs = [
             os.path.join(BASE_DIR, "models"),
@@ -163,6 +217,297 @@ class DataLoader:
 
         # Build student records map
         self._rebuild_students_map()
+
+    def enrich_imported_students(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+            Run Lumora ML predictions and derived analytics
+             on newly imported student records.
+        """
+
+        df = df.copy()
+
+        # -----------------------------
+        # Basic derived values
+        # -----------------------------
+
+        df["average_score"] = (
+            df["marks"] /
+            df["max_marks"].replace(0, np.nan) * 100
+        ).fillna(0).clip(0, 100)
+
+        df["assignment_completion_rate"] = (
+            df["submitted"] /
+            df["total_assignments"].replace(0, np.nan) * 100
+        ).fillna(0).clip(0, 100)
+
+            # -----------------------------
+            # Required default fields
+            # -----------------------------
+
+        defaults = {
+            "activity_type": "None",
+            "leadership_role": "None",
+            "books_borrowed": 0,
+            "books_returned": 0,
+            "fine_amount": 0.0,
+            "last_activity": "",
+            "total_fee": 0.0,
+            "paid_amount": 0.0,
+            "fee_status": "Unknown",
+            "payment_date": "",
+            "academic_support_need": "None",
+            "career_support_need": "None",
+            "last_submission_date": "",
+            "mentor_id": "",
+            "mentor_name": "Not Required",
+            "mentor_match_reason": "None",
+        }
+
+        for column, default_value in defaults.items():
+            if column not in df.columns:
+                df[column] = default_value
+            else:
+                df[column] = df[column].fillna(default_value)
+
+            # -----------------------------
+            # ML: Academic Risk
+            # -----------------------------
+
+            academic_input = df[self.academic_features]
+
+        df["academic_risk_probability"] = (
+                self.academic_model
+                .predict_proba(academic_input)[:, 1]
+        )
+
+            # -----------------------------
+            # ML: Placement Risk
+            # -----------------------------
+
+        placement_input = df[self.placement_features]
+
+        df["placement_risk_probability"] = (
+            self.placement_model
+            .predict_proba(placement_input)[:, 1]
+        )
+
+            # -----------------------------
+            # Overall Risk
+            # -----------------------------
+
+        df["predicted_risk_level"] = np.select(
+            [
+                (df["academic_risk_probability"] >= 0.70) |
+                (df["placement_risk_probability"] >= 0.70),
+
+                (df["academic_risk_probability"] >= 0.40) |
+                (df["placement_risk_probability"] >= 0.40)
+            ],
+            [
+                "High",
+                "Medium"
+            ],
+            default="Low"
+        )
+
+            # -----------------------------
+            # Performance scores
+            # -----------------------------
+
+        df["academic_score"] = (
+            df["average_score"] * 0.70 +
+            df["attendance_percent"] * 0.15 +
+            df["assignment_completion_rate"] * 0.15
+        ).clip(0, 100)
+
+        df["skill_score"] = df[
+            [
+                "technical_skill",
+                "communication_skill",
+                "problem_solving",
+                "teamwork",
+                "leadership"
+            ]
+        ].mean(axis=1).clip(0, 100)
+
+        df["placement_score"] = df[
+            [
+                "aptitude_score",
+                "coding_score",
+                "placement_communication_score",
+                "mock_interview_score"
+            ]
+        ].mean(axis=1).clip(0, 100)
+
+        df["engagement_score"] = (
+            df["activities_joined"] * 10 +
+            df["events_attended"] * 5 +
+            df["leadership"] * 0.5
+        ).clip(0, 100)
+
+        df["feedback_score"] = (
+            df["student_satisfaction"] * 0.5 +
+            df["faculty_feedback"] * 0.5
+        ).clip(0, 100)
+
+        df["student_success_score"] = (
+            df["academic_score"] * 0.30 +
+            df["skill_score"] * 0.20 +
+            df["placement_score"] * 0.25 +
+            df["engagement_score"] * 0.15 +
+            df["feedback_score"] * 0.10
+        ).clip(0, 100)
+
+        df["risk_level"] = df["predicted_risk_level"]
+
+            # -----------------------------
+            # Leadership indicator
+            # -----------------------------
+
+        df["leadership_indicator"] = (
+            (df["leadership"] >= 70) |
+            (
+                df["leadership_role"]
+                .astype(str)
+                .str.lower() != "none"
+            )
+        ).astype(int)
+
+            # -----------------------------
+            # Risk factors
+            # -----------------------------
+
+        def get_risk_factors(row):
+            factors = []
+
+            if row["attendance_percent"] < 75:
+                factors.append("Low attendance")
+
+            if row["assignment_completion_rate"] < 70:
+                factors.append("Low assignment completion")
+
+            if row["average_score"] < 60:
+                factors.append("Low academic performance")
+
+            if row["technical_skill"] < 60:
+                factors.append("Technical skill gap")
+
+            if row["coding_score"] < 60:
+                factors.append("Coding skill gap")
+
+            if row["communication_skill"] < 60:
+                factors.append("Communication skill gap")
+
+            if row["mock_interview_score"] < 60:
+                factors.append("Mock interview readiness gap")
+
+            if row["student_satisfaction"] < 60:
+                factors.append("Low student satisfaction")
+
+            return factors
+
+        df["risk_factors"] = df.apply(
+            get_risk_factors,
+            axis=1
+        )
+
+            # -----------------------------
+            # Recommendations
+            # -----------------------------
+
+        def get_recommendations(row):
+            recommendations = []
+
+            if row["attendance_percent"] < 75:
+                recommendations.append("Improve attendance")
+
+            if row["assignment_completion_rate"] < 70:
+                recommendations.append(
+                    "Complete pending assignments"
+                )
+
+            if row["average_score"] < 60:
+                recommendations.append(
+                       "Attend academic support"
+                )
+
+            if row["technical_skill"] < 60:
+                    recommendations.append(
+                        "Complete technical training"
+                )
+
+            if row["coding_score"] < 60:
+                    recommendations.append(
+                        "Practice coding regularly"
+                )
+
+            if row["communication_skill"] < 60:
+                recommendations.append(
+                    "Attend communication training"
+                )
+
+            if row["mock_interview_score"] < 60:
+                recommendations.append(
+                    "Schedule mock interviews"
+                )
+
+            return recommendations
+
+        df["recommendations"] = df.apply(
+            get_recommendations,
+            axis=1
+        )
+
+            # -----------------------------
+            # Student segmentation
+            # -----------------------------
+
+        segment_features = df[
+            [
+                "academic_score",
+                "skill_score",
+                "placement_score",
+                "engagement_score",
+                "feedback_score"
+            ]
+        ]
+
+        scaled_segments = (
+            self.segmentation_scaler
+            .transform(segment_features)
+        )
+
+        df["segment"] = (
+            self.student_segmentation_model
+            .predict(scaled_segments)
+        )
+
+        segment_names = {
+            0: "High Performers",
+            1: "High Risk - Needs Intervention",
+            2: "Strong & Engaged",
+            3: "Developing Students"
+        }
+
+        df["segment_name"] = (
+            df["segment"]
+            .map(segment_names)
+            .fillna("Developing Students")
+        )
+
+        # -----------------------------
+        # Convert lists to JSON strings
+        # -----------------------------
+
+        df["risk_factors"] = df["risk_factors"].apply(
+            lambda x: json.dumps(x)
+        )
+
+        df["recommendations"] = df["recommendations"].apply(
+            lambda x: json.dumps(x)
+        )
+
+        return df
 
     def _rebuild_students_map(self):
         self.students_map = {}

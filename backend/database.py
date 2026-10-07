@@ -131,6 +131,14 @@ def init_db():
         verified_at TEXT
     );
     """)
+    # 9. Students
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS students (
+        student_id TEXT PRIMARY KEY,
+        student_data TEXT NOT NULL,
+        imported_at TEXT NOT NULL
+    );
+    """)
 
     conn.commit()
 
