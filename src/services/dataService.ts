@@ -34,7 +34,7 @@ import type {
 // Configuration: Switch between local CSV/JSON loader and remote FastAPI backend
 export const CONFIG = {
   USE_BACKEND_API: true,
-  API_BASE_URL: 'http://localhost:8000/api',
+  API_BASE_URL: 'https://lumora-student-success.onrender.com/api',
 };
 
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T | null> {
